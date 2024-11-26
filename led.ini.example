@@ -1,0 +1,8 @@
+[strip_name]
+count = 1
+pin = 1
+color_red = 255
+color_green = 255
+color_blue = 255
+idle_wait_ms = 200
+active_wait_ms = 200
