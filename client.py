@@ -63,27 +63,32 @@ class Client:
 
     async def get_status(self):
         while True:
-            # if self.status == LEDStripQueue.STATUS_IDLE:
-                if IO.input(self.button_pin):
-                    print(f'Button released {self.status}')
-                elif self.status == LEDStripQueue.STATUS_IDLE:
-                        print('Button pressed')
+                if IO.input(self.button_pin) < 1:
+                    if self.status == LEDStripQueue.STATUS_IDLE:
+                        # print('Button pressed')
                         await self.led_queue.clear()
                         self.status = LEDStripQueue.STATUS_VIDEO
+                # else:
+                    # print(f'Button released {self.status}')
+
                 await asyncio.sleep(0)
 
+    async def connect_to_server(self):
+        try:
+            self.connection_reader, self.connection_writer = await asyncio.open_connection(self.host, self.port)
+            print(f'Connected to {self.host}:{self.port}')
+        except ConnectionRefusedError as e:
+            print(f'Connection not established with status {e}')
+
     async def run(self):
-        # self.connection_reader, self.connection_writer = await asyncio.open_connection(self.host, self.port)
-        # print(f'Connected to {self.host}:{self.port}')
-
-
         self.led_queue = LEDStripQueue(self.led_config)
         self.led_queue.init()
 
         show_led_task = asyncio.create_task(self.show_led())
         get_status_task = asyncio.create_task(self.get_status())
+        connect_to_server_task = asyncio.create_task(self.connect_to_server())
         try:
-            await asyncio.gather(show_led_task, get_status_task)
+            await asyncio.gather(show_led_task, get_status_task, connect_to_server_task)
         finally:
             await self.led_queue.clear()
 
