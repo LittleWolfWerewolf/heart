@@ -46,7 +46,7 @@ class Server:
 
 async def main(server):
     server_task = await asyncio.start_server(
-        server.handle_echo, '127.0.0.1', int(server.config['server']['port']))
+        server.handle_echo, server.config['server']['host'], int(server.config['server']['port']))
 
     addr = server_task.sockets[0].getsockname()
     print(f'Serving on {addr}')

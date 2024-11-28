@@ -24,6 +24,7 @@ class Client:
 
     status: int = -1
     server_started: bool = False
+    server_connected: bool = False
 
     def __init__(self, server_config = None, led_config = None):
         if server_config is None:
@@ -61,26 +62,10 @@ class Client:
         finally:
             await self.led_queue.clear()
 
-    async def get_status(self):
-        while True:
-            if IO.input(self.button_pin) < 1 and not self.server_started:
-                if self.status == LEDStripQueue.STATUS_IDLE:
-                    await self.led_queue.clear()
-                    self.status = LEDStripQueue.STATUS_VIDEO
-                    self.server_started = True
-                    await self.send_status_to_server()
-                # else:
-                    # print(f'Button released {self.status}')
-
-                await asyncio.sleep(0)
-            else:
-                if IO.input(self.button_pin) > 0 and not self.server_started:
-                    self.status = LEDStripQueue.STATUS_IDLE
-                await asyncio.sleep(0)
-
     async def connect_to_server(self):
         try:
             self.connection_reader, self.connection_writer = await asyncio.open_connection(self.host, self.port)
+            self.server_connected = True
             print(f'Connected to {self.host}:{self.port}')
         except ConnectionRefusedError as e:
             print(f'Connection not established with status {e}')
@@ -106,12 +91,32 @@ class Client:
             await asyncio.sleep(0)
 
     async def send_status_to_server(self):
-        if self.connection_writer is not None:
+        if self.connection_writer is not None and self.server_connected:
             try:
                 self.connection_writer.write(str(self.status).encode())
             except Exception as e:
                 pass
             await self.connection_writer.drain()
+
+    async def get_status(self):
+        while True:
+            # button pressed
+            if (IO.input(self.button_pin) < 1):
+                if not self.server_started and self.status == LEDStripQueue.STATUS_IDLE:
+                    await self.led_queue.clear()
+                    self.status = LEDStripQueue.STATUS_VIDEO
+                    self.server_started = True
+
+                    if self.server_connected:
+                        await self.send_status_to_server()
+                # else:
+                    # print(f'Button released {self.status}')
+
+                await asyncio.sleep(0)
+            else:
+                if not self.server_started:
+                    self.status = LEDStripQueue.STATUS_IDLE
+                await asyncio.sleep(0)
 
     async def run(self):
         self.led_queue = LEDStripQueue(self.led_config)
