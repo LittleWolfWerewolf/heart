@@ -76,6 +76,7 @@ class Client:
             else:
                 if IO.input(self.button_pin) > 0 and not self.server_started:
                     self.status = LEDStripQueue.STATUS_IDLE
+                await asyncio.sleep(0)
 
     async def connect_to_server(self):
         try:
@@ -83,6 +84,7 @@ class Client:
             print(f'Connected to {self.host}:{self.port}')
         except ConnectionRefusedError as e:
             print(f'Connection not established with status {e}')
+            return
 
         while True:
             data = await self.connection_reader.read(100)
@@ -101,6 +103,8 @@ class Client:
             if self.status == LEDStripQueue.STATUS_IDLE:
                 self.server_started = False
 
+            await asyncio.sleep(0)
+
     async def send_status_to_server(self):
         if self.connection_writer is not None:
             self.connection_writer.write(str(self.status).encode())
@@ -114,7 +118,7 @@ class Client:
         get_status_task = asyncio.create_task(self.get_status())
         connect_to_server_task = asyncio.create_task(self.connect_to_server())
         try:
-            await asyncio.gather(connect_to_server_task, show_led_task, get_status_task)
+            await asyncio.gather(show_led_task, get_status_task, connect_to_server_task)
         finally:
             self.connection_writer.close()
             await self.led_queue.clear()
