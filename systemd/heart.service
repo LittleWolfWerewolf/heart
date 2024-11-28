@@ -1,0 +1,16 @@
+[Unit]
+Description = Heart client
+After = network.target
+
+[Service]
+Type = simple
+ExecStart = /opt/heart_start
+User = root
+Group = root
+Restart = on-failure
+SyslogIdentifier = heart
+RestartSec = 5
+TimeoutStartSec = 60
+
+[Install]
+WantedBy = multi-user.target

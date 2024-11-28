@@ -1,0 +1,4 @@
+#!/bin/bash
+user=$(awk -F "=" '/user/ {print $2}' /opt/server.ini | xargs)
+cd "/home/$user/heart"
+sudo python3 /home/$user/heart/client.py
