@@ -25,6 +25,7 @@ class Client:
     status: int = -1
     server_started: bool = False
     server_connected: bool = False
+    led_cleared: bool = True
 
     def __init__(self, server_config = None, led_config = None):
         if server_config is None:
@@ -74,7 +75,7 @@ class Client:
         while True:
             data = await self.connection_reader.read(100)
             try:
-                self.status = int(data.decode().strip())
+                status = int(data.decode().strip())
             except ValueError:
                 self.connection_writer.write('Invalid int argument\n'.encode())
                 continue
@@ -82,11 +83,14 @@ class Client:
                 self.connection_writer.write(f'Invalid status {e}\n'.encode())
                 continue
 
-            if self.status not in LEDStripQueue.STATUSES.keys():
+            if status not in LEDStripQueue.STATUSES.keys():
                 self.connection_writer.write(f'Invalid status number!'.encode())
+                continue
 
-            if self.status == LEDStripQueue.STATUS_IDLE:
+            if status == LEDStripQueue.STATUS_IDLE:
                 self.server_started = False
+            else:
+                self.status = status
 
             await asyncio.sleep(0)
 
@@ -102,21 +106,42 @@ class Client:
         while True:
             # button pressed
             if (IO.input(self.button_pin) < 1):
-                if not self.server_started and self.status == LEDStripQueue.STATUS_IDLE:
-                    await self.led_queue.clear()
-                    self.status = LEDStripQueue.STATUS_VIDEO
-                    self.server_started = True
-
-                    if self.server_connected:
+                if self.server_connected:
+                    if not self.server_started and self.status == LEDStripQueue.STATUS_IDLE and self.led_cleared:
+                        await self.led_queue.clear()
+                        self.status = LEDStripQueue.STATUS_VIDEO
+                        self.server_started = True
                         await self.send_status_to_server()
-                # else:
-                    # print(f'Button released {self.status}')
+                        self.led_cleared = False
+                    elif not self.server_started and not self.led_cleared:
+                        if self.status != LEDStripQueue.STATUS_IDLE:
+                            await self.led_queue.clear()
+                        self.status = LEDStripQueue.STATUS_IDLE
+
+                else:
+                    if self.status == LEDStripQueue.STATUS_IDLE:
+                        await self.led_queue.clear()
+                    self.status = LEDStripQueue.STATUS_VIDEO
 
                 await asyncio.sleep(0)
             else:
-                if not self.server_started:
+                if self.server_connected:
+                    if self.status != LEDStripQueue.STATUS_IDLE:
+                        if not self.server_started:
+                            await self.led_queue.clear()
+                            self.status = LEDStripQueue.STATUS_IDLE
+                            self.led_cleared = True
+                    else:
+                        self.led_cleared = True
+
+
+                else:
+                    if self.status != LEDStripQueue.STATUS_IDLE:
+                        await self.led_queue.clear()
                     self.status = LEDStripQueue.STATUS_IDLE
+
                 await asyncio.sleep(0)
+
 
     async def run(self):
         self.led_queue = LEDStripQueue(self.led_config)
@@ -128,7 +153,8 @@ class Client:
         try:
             await asyncio.gather(show_led_task, get_status_task, connect_to_server_task)
         finally:
-            self.connection_writer.close()
+            if self.server_connected:
+                self.connection_writer.close()
             await self.led_queue.clear()
 
 
