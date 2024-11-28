@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-
 import os
 import asyncio
 from configparser import ConfigParser
@@ -24,6 +23,7 @@ class Client:
     button_pin = 0
 
     status: int = -1
+    server_started: bool = False
 
     def __init__(self, server_config = None, led_config = None):
         if server_config is None:
@@ -63,15 +63,19 @@ class Client:
 
     async def get_status(self):
         while True:
-                if IO.input(self.button_pin) < 1:
-                    if self.status == LEDStripQueue.STATUS_IDLE:
-                        # print('Button pressed')
-                        await self.led_queue.clear()
-                        self.status = LEDStripQueue.STATUS_VIDEO
+            if IO.input(self.button_pin) < 1 and not self.server_started:
+                if self.status == LEDStripQueue.STATUS_IDLE:
+                    await self.led_queue.clear()
+                    self.status = LEDStripQueue.STATUS_VIDEO
+                    self.server_started = True
+                    await self.send_status_to_server()
                 # else:
                     # print(f'Button released {self.status}')
 
                 await asyncio.sleep(0)
+            else:
+                if IO.input(self.button_pin) > 0 and not self.server_started:
+                    self.status = LEDStripQueue.STATUS_IDLE
 
     async def connect_to_server(self):
         try:
@@ -79,6 +83,27 @@ class Client:
             print(f'Connected to {self.host}:{self.port}')
         except ConnectionRefusedError as e:
             print(f'Connection not established with status {e}')
+
+        while True:
+            data = await self.connection_reader.read(100)
+            try:
+                self.status = int(data.decode().strip())
+            except ValueError:
+                self.connection_writer.write('Invalid int argument\n'.encode())
+                continue
+            except Exception as e:
+                self.connection_writer.write(f'Invalid status {e}\n'.encode())
+                continue
+
+            if self.status not in LEDStripQueue.STATUSES.keys():
+                self.connection_writer.write(f'Invalid status number!'.encode())
+
+            if self.status == LEDStripQueue.STATUS_IDLE:
+                self.server_started = False
+
+    async def send_status_to_server(self):
+        self.connection_writer.write(str(self.status).encode())
+        await self.connection_writer.drain()
 
     async def run(self):
         self.led_queue = LEDStripQueue(self.led_config)
@@ -88,8 +113,9 @@ class Client:
         get_status_task = asyncio.create_task(self.get_status())
         connect_to_server_task = asyncio.create_task(self.connect_to_server())
         try:
-            await asyncio.gather(show_led_task, get_status_task, connect_to_server_task)
+            await asyncio.gather(connect_to_server_task, show_led_task, get_status_task)
         finally:
+            self.connection_writer.close()
             await self.led_queue.clear()
 
 
