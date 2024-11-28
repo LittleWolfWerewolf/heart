@@ -102,8 +102,9 @@ class Client:
                 self.server_started = False
 
     async def send_status_to_server(self):
-        self.connection_writer.write(str(self.status).encode())
-        await self.connection_writer.drain()
+        if self.connection_writer is not None:
+            self.connection_writer.write(str(self.status).encode())
+            await self.connection_writer.drain()
 
     async def run(self):
         self.led_queue = LEDStripQueue(self.led_config)
