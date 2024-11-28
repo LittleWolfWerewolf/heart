@@ -107,7 +107,10 @@ class Client:
 
     async def send_status_to_server(self):
         if self.connection_writer is not None:
-            self.connection_writer.write(str(self.status).encode())
+            try:
+                self.connection_writer.write(str(self.status).encode())
+            except Exception as e:
+                pass
             await self.connection_writer.drain()
 
     async def run(self):
