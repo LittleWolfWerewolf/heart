@@ -1,5 +1,5 @@
 #!/bin/bash
-user=$(awk -F "=" '/user/ {print $2}' /opt/server.ini | xargs)
+user=$(awk -F "=" '/user/ {print $2}' server.ini | xargs)
 chmod +x ./systemd/heart_start
 sudo ln -s /home/$user/heart/systemd/heart.service /etc/systemd/system/
 sudo ln -s /home/$user/heart/systemd/heart_start /opt/
