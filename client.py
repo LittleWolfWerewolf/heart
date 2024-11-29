@@ -59,7 +59,7 @@ class Client:
         try:
             while True:
                 await self.led_queue.run(self.status)
-                await asyncio.sleep(0)
+                # await asyncio.sleep(0)
         finally:
             await self.led_queue.clear()
             await asyncio.sleep(0)
@@ -109,20 +109,23 @@ class Client:
             if (IO.input(self.button_pin) < 1):
                 if self.server_connected:
                     if not self.server_started and self.status == LEDStripQueue.STATUS_IDLE and self.led_cleared:
+                        await self.send_status_to_server()
+                        self.server_started = True
+                        self.led_cleared = False
                         await self.led_queue.clear()
                         self.status = LEDStripQueue.STATUS_VIDEO
-                        self.server_started = True
-                        await self.send_status_to_server()
-                        self.led_cleared = False
+                        self.led_queue.running = True
                     elif not self.server_started and not self.led_cleared:
                         if self.status != LEDStripQueue.STATUS_IDLE:
                             await self.led_queue.clear()
                         self.status = LEDStripQueue.STATUS_IDLE
+                        self.led_queue.running = True
 
                 else:
                     if self.status == LEDStripQueue.STATUS_IDLE:
                         await self.led_queue.clear()
                     self.status = LEDStripQueue.STATUS_VIDEO
+                    self.led_queue.running = True
 
                 await asyncio.sleep(0)
             else:
@@ -131,6 +134,7 @@ class Client:
                         if not self.server_started:
                             await self.led_queue.clear()
                             self.status = LEDStripQueue.STATUS_IDLE
+                            self.led_queue.running = True
                             self.led_cleared = True
                     else:
                         self.led_cleared = True
@@ -140,6 +144,7 @@ class Client:
                     if self.status != LEDStripQueue.STATUS_IDLE:
                         await self.led_queue.clear()
                     self.status = LEDStripQueue.STATUS_IDLE
+                    self.led_queue.running = True
 
                 await asyncio.sleep(0)
 

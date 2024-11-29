@@ -14,18 +14,18 @@ class LedStrip:
     invert = False  # True to invert the signal (when using NPN transistor level shift)
     channel = 0  #set to '1' for GPIOs 13, 19, 41, 45 or 53
 
-    active_brightness = 255
+    video_brightness = 255
     idle_brightness = 145
     black_brightness = 0
     brightness_step = 1
     idle_wait_ms = 10
-    active_wait_ms = 10
+    video_wait_ms = 10
 
     color_red = 255
     color_green = 116
     color_blue = 0
 
-    _strip = None
+    strip = None
 
 
     def __init__(self, **kwargs):
@@ -39,7 +39,7 @@ class LedStrip:
                     setattr(self, fieldName, fieldValue)
                 elif fieldName in ["pin", "count"]:
                     setattr(self, fieldName, int(fieldValue))
-                elif fieldName in ["color_red", "color_green", "color_blue", "idle_wait_ms", "active_wait_ms"]:
+                elif fieldName in ["color_red", "color_green", "color_blue", "idle_wait_ms", "video_wait_ms"]:
                     setattr(self, fieldName, float(fieldValue))
                 else:
                     setattr(self, fieldName, fieldValue)
@@ -48,10 +48,10 @@ class LedStrip:
             raise AttributeError(f"Arguments led pin and led count is required")
 
         self.channel = 1 if self.pin in [13, 19, 41, 45, 53] else 0
-        self._strip = PixelStrip(self.count, self.pin, self.freqz, self.dma, self.invert, self.active_brightness, self.channel)
+        self.strip = PixelStrip(self.count, self.pin, self.freqz, self.dma, self.invert, self.video_brightness, self.channel)
 
     def init(self):
-        self._strip.begin()
+        self.strip.begin()
         self.running = True
 
     def start(self):
@@ -60,8 +60,8 @@ class LedStrip:
     def clear(self):
         self.running = False
         for i in range(self.count):
-            self._strip.setPixelColor(i, Color(0, 0, 0))
-        self._strip.show()
+            self.strip.setPixelColor(i, Color(0, 0, 0))
+        self.strip.show()
 
     async def show_idle_animation(self, color = None, wait_ms = None, brightness_step = None):
         if wait_ms is None:
@@ -74,7 +74,7 @@ class LedStrip:
             wait_ms=wait_ms,
             brightness_step=brightness_step
         )
-        await asyncio.sleep(0)
+        # await asyncio.sleep(0)
 
     async def show_active_animation(self, color = None, wait_ms = None, brightness_step = None):
         if wait_ms is None:
@@ -96,17 +96,17 @@ class LedStrip:
         for i in range(start_brightness, stop_brightness, brightness_step):
             if not self.running:
                 return
-            await self._set_strip(color=color, wait_ms=wait_ms, brightness=i)
-            await asyncio.sleep(0)
+            await self._setstrip(color=color, wait_ms=wait_ms, brightness=i)
+            # await asyncio.sleep(0)
 
 
         for i in range(stop_brightness, start_brightness, -brightness_step):
             if not self.running:
                 return
-            await self._set_strip(color=color, wait_ms=wait_ms, brightness=i)
-            await asyncio.sleep(0)
+            await self._setstrip(color=color, wait_ms=wait_ms, brightness=i)
+            # await asyncio.sleep(0)
 
-    async def _set_strip(self, color = None, wait_ms = None, brightness = None):
+    async def _setstrip(self, color = None, wait_ms = None, brightness = None):
         if color is None:
             color = (self.color_red, self.color_green, self.color_blue)
 
@@ -114,7 +114,7 @@ class LedStrip:
             return
 
         for led_num in range(1, self.count):
-            self._strip.setPixelColor(
+            self.strip.setPixelColor(
                 led_num,
                 Color(
                     int(brightness / 256 * color[0]),
@@ -122,5 +122,6 @@ class LedStrip:
                     int(brightness / 256 * color[2])
                 )
             )
-        self._strip.show()
-        await asyncio.sleep(wait_ms / 100000.0)
+        self.strip.show()
+        # await asyncio.sleep(wait_ms / 100000.0)
+        time.sleep(wait_ms / 100000.0)
