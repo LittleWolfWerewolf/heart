@@ -62,6 +62,7 @@ class Client:
                 await asyncio.sleep(0)
         finally:
             await self.led_queue.clear()
+            await asyncio.sleep(0)
 
     async def connect_to_server(self):
         try:

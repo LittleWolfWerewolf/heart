@@ -57,14 +57,14 @@ class LEDStripQueue:
         for strip in self._strips.values():
             strip.start()
             await strip.show_idle_animation(color=color, wait_ms=wait_ms, brightness_step=brightness_step)
-        await asyncio.sleep(0)
+            await asyncio.sleep(0)
 
     async def video(self, color = None, wait_ms = None, brightness_step = None):
         self.running = True
         for strip in self._strips.values():
             strip.start()
             await strip.show_active_animation(color=color, wait_ms=wait_ms, brightness_step=brightness_step)
-        await asyncio.sleep(0)
+            await asyncio.sleep(0)
 
     async def clear(self):
         if self.active_animation is asyncio.Task:
