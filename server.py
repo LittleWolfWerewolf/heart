@@ -36,9 +36,8 @@ class Server:
 
             print(f"Received {message!r} from {addr!r}")
 
-            sleep_time = random.randint(3, 10)
-            print(f"Sleeping {sleep_time} seconds...")
-            await asyncio.sleep(sleep_time)
+            print("Sleeping 20 seconds...")
+            await asyncio.sleep(20)
 
             print(f"Send: {message!r}")
             self.writer.write("0".encode())
