@@ -106,6 +106,8 @@ class LEDStripQueue:
 
         if brightness_step is not None:
             settings['brightness_step'] = brightness_step
+        else:
+            settings['brightness_step'] = settings['brightness_step'] * 3
 
         for strip in self._strips.values():
             strip.start()
@@ -171,7 +173,7 @@ class LEDStripQueue:
         else:
             start_brightness = min([strip.idle_brightness for strip in self._strips.values()]) - 60
         max_brightness = max([getattr(strip, f"{action}_brightness") for strip in self._strips.values()])
-        brightness_step = statistics.mean([strip.brightness_step for strip in self._strips.values()])
+        brightness_step = statistics.mean([getattr(strip, f"{action}_brightness_step") for strip in self._strips.values()])
         wait_ms = statistics.mean([getattr(strip, f"{action}_wait_ms") for strip in self._strips.values()])
 
         result = {

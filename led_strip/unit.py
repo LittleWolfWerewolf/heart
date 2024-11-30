@@ -17,7 +17,8 @@ class LedStrip:
     video_brightness = 255
     idle_brightness = 145
     black_brightness = 0
-    brightness_step = 1
+    idle_brightness_step = 1
+    video_brightness_step = 5
     idle_wait_ms = 10
     video_wait_ms = 10
 
