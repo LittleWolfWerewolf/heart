@@ -77,7 +77,8 @@ class Client:
         try:
             self.connection_reader, self.connection_writer = await asyncio.open_connection(self.host, self.port)
             self.server_connected = True
-            print(f'Connected to {self.host}:{self.port}')
+            if self.debug:
+                print(f'Connected to {self.host}:{self.port}')
         except ConnectionRefusedError as e:
             print(f'Connection not established with status {e}')
             return
@@ -131,12 +132,12 @@ class Client:
                     if not self.server_started and self.status == LEDStripQueue.STATUS_IDLE and self.led_cleared:
                         if self.debug:
                             print('SERVER: Start video')
-                        await self.send_status_to_server()
                         self.server_started = True
                         self.led_cleared = False
                         await self.led_queue.clear()
                         self.status = LEDStripQueue.STATUS_VIDEO
                         self.led_queue.running = True
+                        await self.send_status_to_server()
                     elif not self.server_started and not self.led_cleared:
                         if self.debug:
                             print('SERVER: Stop video')
