@@ -23,7 +23,9 @@ class LEDStripQueue:
 
     running = False
 
-    def __init__(self, config = None):
+    debug = False
+
+    def __init__(self, config = None, debug = False):
         if config is None:
             raise AttributeError('Config cannot be null')
 
@@ -34,11 +36,15 @@ class LEDStripQueue:
             strip = LedStrip(**self.config[section])
             self._strips[strip.name] = strip
 
+        self.debug = debug
+
     def init(self):
         for strip in self._strips.values():
             strip.init()
 
         self.running = True
+        if self.debug:
+            print('LED: LED strip init complete')
 
     async def run(self, status: int):
         if status not in self.STATUSES.keys():
@@ -55,6 +61,8 @@ class LEDStripQueue:
 
     async def idle(self, color = None, wait_ms = None, brightness_step = None):
         self.running = True
+        if self.debug:
+            print('LED: strip start idle')
 
         settings = self.get_led_settings('idle')
         if wait_ms is not None:
@@ -72,16 +80,22 @@ class LEDStripQueue:
         for brightness in range(settings['start_brightness'], settings['max_brightness'], settings['brightness_step']):
             if not self.running:
                 return
+            if self.debug:
+                print(f'LED: Setting brightness: {brightness}')
             await self.set_strips(brightness, settings)
 
         for brightness in range(settings['max_brightness'], settings['start_brightness'], -settings['brightness_step']):
             if not self.running:
                 return
+            if self.debug:
+                print(f'LED: Setting brightness: {brightness}')
             await self.set_strips(brightness, settings)
 
 
     async def video(self, color=None, wait_ms=None, brightness_step=None):
         self.running = True
+        if self.debug:
+            print('LED: LED strip start video')
 
         settings = self.get_led_settings('video')
         if wait_ms is not None:
@@ -97,11 +111,15 @@ class LEDStripQueue:
             strip.start()
 
         for brightness in range(settings['start_brightness'], settings['max_brightness'], settings['brightness_step']):
+            if self.debug:
+                print(f'LED: Setting brightness: {brightness}')
             if not self.running:
                 return
             await self.set_strips(brightness, settings)
 
         for brightness in range(settings['max_brightness'], settings['start_brightness'], -settings['brightness_step']):
+            if self.debug:
+                print(f'LED: Setting brightness: {brightness}')
             if not self.running:
                 return
             await self.set_strips(brightness, settings)
@@ -156,7 +174,7 @@ class LEDStripQueue:
         brightness_step = statistics.mean([strip.brightness_step for strip in self._strips.values()])
         wait_ms = statistics.mean([getattr(strip, f"{action}_wait_ms") for strip in self._strips.values()])
 
-        return {
+        result = {
             'led_count': led_count,
             'start_brightness': start_brightness,
             'max_brightness': max_brightness,
@@ -164,8 +182,15 @@ class LEDStripQueue:
             'wait_ms': wait_ms
         }
 
+        if self.debug:
+            print(f'LED: Settings: {result}')
+
+        return result
+
 
     async def clear(self):
+        if self.debug:
+            print('LED: Cleared LED strip')
         if self.active_animation is asyncio.Task:
             self.active_animation.cancel()
 

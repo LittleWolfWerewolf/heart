@@ -27,6 +27,9 @@ class Client:
     server_connected: bool = False
     led_cleared: bool = True
 
+    led_debug: bool = False
+    server_debug: bool = False
+
     def __init__(self, server_config = None, led_config = None):
         if server_config is None:
             raise AttributeError('Server config cannot be null')
@@ -38,6 +41,9 @@ class Client:
         if 'server' not in self.config.sections():
             raise AttributeError('Server section cannot be null')
 
+        if 'debug' in self.config['server']:
+            self.debug = True if int(self.config['server']['debug']) > 0 else False
+
         for key in ['host', 'port']:
             if key not in self.config['server']:
                 raise AttributeError('Server section must contain key "%s"' % key)
@@ -48,6 +54,9 @@ class Client:
 
         if 'button' not in self.config.sections() or 'pin' not in self.config['button']:
             raise AttributeError('Button pin cannot be null')
+
+        if 'service' in self.config.sections() and 'debug' in self.config['service']:
+            self.led_debug = True if int(self.config['service']['debug']) > 0 else False
 
         self.button_pin = int(self.config['button']['pin'])
         IO.setup(self.button_pin, IO.IN)
@@ -90,10 +99,16 @@ class Client:
 
             if status == LEDStripQueue.STATUS_IDLE:
                 if self.server_connected:
+                    if self.debug:
+                        print('SERVER: Stop video')
                     self.server_started = False
                 else:
+                    if self.debug:
+                        print('LOCAL: Stop video')
                     self.status = status
             else:
+                if self.debug:
+                    print(f'SERVER: Set status {status}')
                 self.status = status
 
             await asyncio.sleep(0)
@@ -102,6 +117,8 @@ class Client:
         if self.connection_writer is not None and self.server_connected:
             try:
                 self.connection_writer.write(str(self.status).encode())
+                if self.debug:
+                    print('SERVER: Send start to server')
             except Exception as e:
                 pass
             await self.connection_writer.drain()
@@ -112,6 +129,8 @@ class Client:
             if (IO.input(self.button_pin) < 1):
                 if self.server_connected:
                     if not self.server_started and self.status == LEDStripQueue.STATUS_IDLE and self.led_cleared:
+                        if self.debug:
+                            print('SERVER: Start video')
                         await self.send_status_to_server()
                         self.server_started = True
                         self.led_cleared = False
@@ -119,12 +138,16 @@ class Client:
                         self.status = LEDStripQueue.STATUS_VIDEO
                         self.led_queue.running = True
                     elif not self.server_started and not self.led_cleared:
+                        if self.debug:
+                            print('SERVER: Stop video')
                         if self.status != LEDStripQueue.STATUS_IDLE:
                             await self.led_queue.clear()
                         self.status = LEDStripQueue.STATUS_IDLE
                         self.led_queue.running = True
 
                 else:
+                    if self.debug:
+                        print('LOCAL: Start video')
                     if self.status == LEDStripQueue.STATUS_IDLE:
                         await self.led_queue.clear()
                     self.status = LEDStripQueue.STATUS_VIDEO
@@ -135,15 +158,21 @@ class Client:
                 if self.server_connected:
                     if self.status != LEDStripQueue.STATUS_IDLE:
                         if not self.server_started:
+                            if self.debug:
+                                print('SERVER: Start idle')
                             await self.led_queue.clear()
                             self.status = LEDStripQueue.STATUS_IDLE
                             self.led_queue.running = True
                             self.led_cleared = True
                     else:
+                        if self.debug:
+                            print('SERVER: reload')
                         self.led_cleared = True
 
 
                 else:
+                    if self.debug:
+                        print('LOCAL: reload')
                     if self.status != LEDStripQueue.STATUS_IDLE:
                         await self.led_queue.clear()
                     self.status = LEDStripQueue.STATUS_IDLE
@@ -153,7 +182,7 @@ class Client:
 
 
     async def run(self):
-        self.led_queue = LEDStripQueue(self.led_config)
+        self.led_queue = LEDStripQueue(self.led_config, self.led_debug)
         self.led_queue.init()
 
         show_led_task = asyncio.create_task(self.show_led())
