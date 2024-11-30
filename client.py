@@ -41,9 +41,6 @@ class Client:
         if 'server' not in self.config.sections():
             raise AttributeError('Server section cannot be null')
 
-        if 'debug' in self.config['server']:
-            self.debug = True if int(self.config['server']['debug']) > 0 else False
-
         for key in ['host', 'port']:
             if key not in self.config['server']:
                 raise AttributeError('Server section must contain key "%s"' % key)
@@ -57,6 +54,9 @@ class Client:
 
         if 'service' in self.config.sections() and 'debug' in self.config['service']:
             self.led_debug = True if int(self.config['service']['debug']) > 0 else False
+
+        if 'debug' in self.config['server']:
+            self.debug = True if int(self.config['server']['debug']) > 0 else False
 
         self.button_pin = int(self.config['button']['pin'])
         IO.setup(self.button_pin, IO.IN)
