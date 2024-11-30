@@ -38,7 +38,7 @@ class LedStrip:
             if hasattr(self, fieldName):
                 if fieldName in ["name"]:
                     setattr(self, fieldName, fieldValue)
-                elif fieldName in ["pin", "count"]:
+                elif fieldName in ["pin", "count", "idle_brightness_step", "video_brightness_step"]:
                     setattr(self, fieldName, int(fieldValue))
                 elif fieldName in ["color_red", "color_green", "color_blue", "idle_wait_ms", "video_wait_ms"]:
                     setattr(self, fieldName, float(fieldValue))
