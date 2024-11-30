@@ -21,6 +21,7 @@ class LedStrip:
     video_brightness_step = 5
     idle_wait_ms = 10
     video_wait_ms = 10
+    video_led_step = 6
 
     color_red = 255
     color_green = 116
@@ -38,7 +39,7 @@ class LedStrip:
             if hasattr(self, fieldName):
                 if fieldName in ["name"]:
                     setattr(self, fieldName, fieldValue)
-                elif fieldName in ["pin", "count", "idle_brightness_step", "video_brightness_step"]:
+                elif fieldName in ["pin", "count", "idle_brightness_step", "video_brightness_step", "video_led_step"]:
                     setattr(self, fieldName, int(fieldValue))
                 elif fieldName in ["color_red", "color_green", "color_blue", "idle_wait_ms", "video_wait_ms"]:
                     setattr(self, fieldName, float(fieldValue))
