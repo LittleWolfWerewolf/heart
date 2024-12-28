@@ -27,6 +27,9 @@ class Client:
     server_connected: bool = False
     led_cleared: bool = True
 
+    status_changed: bool = False
+    button_state: bool = False
+
     led_debug: bool = False
     server_debug: bool = False
 
@@ -80,6 +83,9 @@ class Client:
             if self.debug:
                 print(f'Connected to {self.host}:{self.port}')
         except ConnectionRefusedError as e:
+            print(f'Connection not established with status {e}')
+            return
+        except OSError as e:
             print(f'Connection not established with status {e}')
             return
 
@@ -136,15 +142,15 @@ class Client:
                         self.led_cleared = False
                         await self.led_queue.clear()
                         self.status = LEDStripQueue.STATUS_VIDEO
-                        self.led_queue.running = True
+                        self.status_changed = True
                         await self.send_status_to_server()
                     elif not self.server_started and not self.led_cleared:
                         if self.debug:
                             print('SERVER: Stop video')
                         if self.status != LEDStripQueue.STATUS_IDLE:
                             await self.led_queue.clear()
+                            self.status_changed = True
                         self.status = LEDStripQueue.STATUS_IDLE
-                        self.led_queue.running = True
 
                 else:
                     if self.debug:
@@ -152,9 +158,10 @@ class Client:
                     if self.status == LEDStripQueue.STATUS_IDLE:
                         await self.led_queue.clear()
                     self.status = LEDStripQueue.STATUS_VIDEO
-                    self.led_queue.running = True
+                    if not self.button_state:
+                        self.status_changed = True
+                        self.button_state = True
 
-                await asyncio.sleep(0)
             else:
                 if self.server_connected:
                     if self.status != LEDStripQueue.STATUS_IDLE:
@@ -163,13 +170,12 @@ class Client:
                                 print('SERVER: Start idle')
                             await self.led_queue.clear()
                             self.status = LEDStripQueue.STATUS_IDLE
-                            self.led_queue.running = True
+                            self.status_changed = True
                             self.led_cleared = True
                     else:
                         if self.debug:
                             print('SERVER: reload')
                         self.led_cleared = True
-
 
                 else:
                     if self.debug:
@@ -177,20 +183,29 @@ class Client:
                     if self.status != LEDStripQueue.STATUS_IDLE:
                         await self.led_queue.clear()
                     self.status = LEDStripQueue.STATUS_IDLE
-                    self.led_queue.running = True
+                    if self.button_state:
+                        self.status_changed = True
+                        self.button_state = False
 
-                await asyncio.sleep(0)
+            if self.status_changed:
+                await self.led_queue.clear()
+                await self.led_queue.run(self.status)
+                self.status_changed = False
 
+            await self.led_queue.show()
+            await asyncio.sleep(0)
 
     async def run(self):
         self.led_queue = LEDStripQueue(self.led_config, self.led_debug)
         self.led_queue.init()
+        await self.led_queue.run(LEDStripQueue.STATUS_IDLE)
 
-        show_led_task = asyncio.create_task(self.show_led())
+        # show_led_task = asyncio.create_task(self.show_led())
         get_status_task = asyncio.create_task(self.get_status())
         connect_to_server_task = asyncio.create_task(self.connect_to_server())
         try:
-            await asyncio.gather(show_led_task, get_status_task, connect_to_server_task)
+            # await asyncio.gather(show_led_task, get_status_task, connect_to_server_task)
+            await asyncio.gather(get_status_task, connect_to_server_task)
         finally:
             if self.server_connected:
                 self.connection_writer.close()
