@@ -26,6 +26,7 @@ class Client:
     server_started: bool = False
     server_connected: bool = False
     led_cleared: bool = True
+    system_started: bool = False
 
     status_changed: bool = False
     button_state: bool = False
@@ -151,6 +152,10 @@ class Client:
                             await self.led_queue.clear()
                             self.status_changed = True
                         self.status = LEDStripQueue.STATUS_IDLE
+                    elif not self.system_started:
+                        self.system_started = True
+                        self.status = LEDStripQueue.STATUS_IDLE
+
 
                 else:
                     if self.debug:

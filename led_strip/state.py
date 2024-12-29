@@ -53,6 +53,12 @@ class LedStripState:
             strip.init()
 
     def setattrs(self, *args, **kwargs):
+        self.current_brightness: int = 0
+        self.current_led_num: int = 1
+        self.current_led_count: int = 1
+        self.current_led_step: int = 1
+        self.reverse: bool = False
+
         for fieldName, fieldValue in kwargs.items():
             if hasattr(self, fieldName):
                 if fieldName in [
@@ -122,6 +128,7 @@ class LedStripState:
                 int(brightness / 256 * color[1]),
                 int(brightness / 256 * color[2])
             )
+
         )
 
     async def clear(self):
